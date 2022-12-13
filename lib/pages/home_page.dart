@@ -11,6 +11,7 @@ class HomePage extends StatefulWidget {
 
 class _HomePageState extends State<HomePage> {
   final PokemonBloc _pokemonBloc = PokemonBloc();
+  final TextEditingController _textNome = TextEditingController();
 
   @override
   Widget build(BuildContext context) {
@@ -18,40 +19,59 @@ class _HomePageState extends State<HomePage> {
       appBar: AppBar(title: const Text('Pesquisar Pokémon')),
       body: ListView(
         children: [
-          ElevatedButton(
-            onPressed: () {
-              _pokemonBloc.fetchByName('charmander');
-            },
-            child: const Text('PESQUISAR'),
+          Padding(
+            padding: const EdgeInsets.all(8.0),
+            child: TextField(
+              controller: _textNome,
+              decoration: const InputDecoration(
+                border: UnderlineInputBorder(),
+                labelText: 'Nome do Pokémon',
+              ),
+              onSubmitted: (value) {
+                _pokemonBloc.fetchByName(value.toLowerCase());
+              },
+            ),
           ),
-          StreamBuilder(
-            stream: _pokemonBloc.stream,
-            builder: (context, snapshot) {
-              if (snapshot.hasError) {
-                return Text('Erro: ${snapshot.error}');
-              }
-              if (!snapshot.hasData) {
-                return const Text('Pesquisa um pokémon.');
-              } else {
-                var response = snapshot.data!;
-                if (response.loading) {
-                  return const Center(
-                    child: SizedBox(
-                      height: 48,
-                      width: 48,
-                      child: CircularProgressIndicator(),
-                    ),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 8.0),
+            child: ElevatedButton(
+              onPressed: () {
+                _pokemonBloc.fetchByName(_textNome.text.toLowerCase());
+              },
+              child: const Text('PESQUISAR'),
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.only(top: 8.0),
+            child: StreamBuilder(
+              stream: _pokemonBloc.stream,
+              builder: (context, snapshot) {
+                if (snapshot.hasError) {
+                  return Center(child: Text('Erro: ${snapshot.error}'));
+                }
+                if (!snapshot.hasData) {
+                  return const Center(child: Text('Pesquisa um pokémon.'));
+                } else {
+                  var response = snapshot.data!;
+                  if (response.loading) {
+                    return const Center(
+                      child: SizedBox(
+                        height: 48,
+                        width: 48,
+                        child: CircularProgressIndicator(),
+                      ),
+                    );
+                  }
+                  var pokemon = response.response as Pokemon;
+                  return ListTile(
+                    leading: Chip(label: Text('${pokemon.id}')),
+                    title: Text('${pokemon.nome}'),
+                    subtitle: Text('${pokemon.altura}m - ${pokemon.peso}kg'),
+                    trailing: Image.network('${pokemon.imagem}'),
                   );
                 }
-                var pokemon = response.response as Pokemon;
-                return ListTile(
-                  leading: Chip(label: Text('${pokemon.id}')),
-                  title: Text('${pokemon.nome}'),
-                  subtitle: Text('${pokemon.altura}m - ${pokemon.peso}kg'),
-                  trailing: Image.network('${pokemon.imagem}'),
-                );
-              }
-            },
+              },
+            ),
           )
         ],
       ),
