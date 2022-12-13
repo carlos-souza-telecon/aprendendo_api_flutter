@@ -1,7 +1,6 @@
-import 'package:aprendendo_api_flutter/bloc/pokemon_api.dart';
+import 'package:aprendendo_api_flutter/bloc/pokemon_bloc.dart';
+import 'package:aprendendo_api_flutter/models/pokemon.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/src/widgets/container.dart';
-import 'package:flutter/src/widgets/framework.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -11,63 +10,51 @@ class HomePage extends StatefulWidget {
 }
 
 class _HomePageState extends State<HomePage> {
-  Column colunaResultado = Column(
-    children: [
-      Text('Pesquise um pokémon'),
-    ],
-  );
+  final PokemonBloc _pokemonBloc = PokemonBloc();
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: Text('Pesquisar Pokémon')),
+      appBar: AppBar(title: const Text('Pesquisar Pokémon')),
       body: ListView(
         children: [
           ElevatedButton(
-            onPressed: () async {
-              await pesquisarPokemon();
+            onPressed: () {
+              _pokemonBloc.fetchByName('charmander');
             },
-            child: Text('PESQUISAR'),
+            child: const Text('PESQUISAR'),
           ),
-          colunaResultado,
+          StreamBuilder(
+            stream: _pokemonBloc.stream,
+            builder: (context, snapshot) {
+              if (snapshot.hasError) {
+                return Text('Erro: ${snapshot.error}');
+              }
+              if (!snapshot.hasData) {
+                return const Text('Pesquisa um pokémon.');
+              } else {
+                var response = snapshot.data!;
+                if (response.loading) {
+                  return const Center(
+                    child: SizedBox(
+                      height: 48,
+                      width: 48,
+                      child: CircularProgressIndicator(),
+                    ),
+                  );
+                }
+                var pokemon = response.response as Pokemon;
+                return ListTile(
+                  leading: Chip(label: Text('${pokemon.id}')),
+                  title: Text('${pokemon.nome}'),
+                  subtitle: Text('${pokemon.altura}m - ${pokemon.peso}kg'),
+                  trailing: Image.network('${pokemon.imagem}'),
+                );
+              }
+            },
+          )
         ],
       ),
     );
-  }
-
-  Future<void> pesquisarPokemon() async {
-    var pokemon = await PokemonAPI.getPokemon('charmander');
-    print(pokemon);
-    if (pokemon == null) {
-      print('🐲 Não foi possível encontrar este Pokémon');
-      setState(() {
-        colunaResultado = Column(
-          children: [
-            Text('Não foi possível encontrar este Pokémon!'),
-          ],
-        );
-      });
-    } else {
-      // name, id, height / 10, weight / 10
-      print('🐲 Nome: ${pokemon['name']}');
-      print('🐲 Id: ${pokemon['id']}');
-      print('🐲 Altura: ${(pokemon['height'] as int) / 10}m');
-      print('🐲 Peso: ${(pokemon['weight'] as int) / 10}kg');
-      setState(() {
-        var nome = pokemon['name'].toString().toUpperCase();
-        var id = pokemon['id'];
-        var peso = (pokemon['weight'] as int) / 10;
-        var altura = (pokemon['height'] as int) / 10;
-        colunaResultado = Column(
-          children: [
-            ListTile(
-              leading: Chip(label: Text('$id')),
-              title: Text('$nome'),
-              subtitle: Text('${altura}m - ${peso}kg'),
-            ),
-          ],
-        );
-      });
-    }
   }
 }
